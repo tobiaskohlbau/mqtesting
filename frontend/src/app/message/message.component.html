@@ -1,0 +1,8 @@
+<md-card *ngFor="let msg of msgs;">
+    <md-card-title>ID: {{msg.id}}</md-card-title>
+    <md-card-subtitle>Topic: {{msg.topic}}</md-card-subtitle>
+    <md-card-content>Content: {{msg.payload}}</md-card-content>
+    <md-card-actions>
+        <a md-fab (click)="delete(msg.id)"><md-icon>delete</md-icon></a>
+    </md-card-actions>
+</md-card>
