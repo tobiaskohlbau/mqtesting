@@ -53,6 +53,10 @@
 
 [[dependencies]]
   branch = "master"
+  name = "github.com/dgrijalva/jwt-go"
+
+[[dependencies]]
+  branch = "master"
   name = "github.com/eclipse/paho.mqtt.golang"
 
 [[dependencies]]
@@ -73,4 +77,20 @@
 
 [[dependencies]]
   branch = "master"
+  name = "github.com/satori/go.uuid"
+
+[[dependencies]]
+  branch = "master"
   name = "github.com/spf13/cobra"
+
+[[dependencies]]
+  branch = "master"
+  name = "github.com/spf13/viper"
+
+[[dependencies]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+
+[[dependencies]]
+  name = "google.golang.org/appengine"
+  version = "^1.0.0"
