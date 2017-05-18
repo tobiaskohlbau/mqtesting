@@ -1,7 +1,11 @@
-```
-docker build . -t tobiaskohlbau/mqtesting
-docker run -d --name mqtesting-broker -p 1883:1883 toke/mosquitto
-docker run -d --name mqtesting-psql -p 5432:5432 -e POSTGRES_PASSWORD=secret postgres
-docker run -d --name mqtesting-proxy -p 80:80 --link mqtesting-broker:mqtt --link mqtesting-psql:db tobiaskohlbau/mqtesting
-go run main.go pub -m "Hello World!" -t "mqtesting"
-```
+* create certificates within certs/ directory (`cd certs && make && cd ..`)
+* create `mqtesting.docker.yaml` from sample file
+* use `docker-compose up --build` to build and run solution
+* use mqtesting (`go run main.go pub -m "MESSAGE" -t "TOPIC"`) or any other mqtt client to publish message to broker
+
+### References
+
+This repository uses ideas and inspiration from the following sources:
+
+* https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1
+* https://github.com/disintegration/bebop/

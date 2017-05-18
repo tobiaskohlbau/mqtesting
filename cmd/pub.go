@@ -15,11 +15,11 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/tobiaskohlbau/mqtesting/mqtt"
 )
 
 var (
@@ -36,17 +36,16 @@ var pubCmd = &cobra.Command{
 			cmd.Usage()
 			return
 		}
-		opts := &mqtt.ClientOptions{
-			ClientID:     "mqtesting-pub",
-			CleanSession: true,
+		brokerAddress := viper.GetString("broker")
+		if brokerAddress == "localhost:1883" {
+			log.Println("pub: using default broker settings")
 		}
-		opts.AddBroker(fmt.Sprintf("tcp://%s", mqttAddress))
-		c := mqtt.NewClient(opts)
-		if token := c.Connect(); token.Wait() && token.Error() != nil {
-			log.Fatal(token.Error())
+		mqttService, err := mqtt.New(brokerAddress, "mqtesting-pub")
+		if err != nil {
+			log.Fatal(err)
 		}
-		if t := c.Publish(topic, 0, false, msg); t.Wait() && t.Error() != nil {
-			log.Fatal(t.Error())
+		if err := mqttService.Publish(topic, 0, false, msg); err != nil {
+			log.Fatal(err)
 		}
 	},
 }

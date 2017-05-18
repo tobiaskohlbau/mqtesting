@@ -1,0 +1,32 @@
+version: '3'
+services:
+  postgres:
+    image: postgres
+    ports:
+    - 5432:5432
+    environment:
+    - POSTGRES_PASSWORD=secret
+  broker:
+    image: toke/mosquitto
+    ports:
+    - 1883:1883
+    - 9001:9001
+  # pgadmin:
+  #   image: chorss/docker-pgadmin4
+  #   ports:
+  #   - 5050:5050
+  #   links:
+  #   - postgres:db
+  mqtesting:
+    build: .
+    ports:
+    - 80:80
+    - 443:443
+    links:
+    - postgres:db
+    - broker:mqtt
+    volumes:
+    - ./certs:/certs/
+    - ./mqtesting.docker.yaml:/root/mqtesting.yaml
+  
+

@@ -15,23 +15,29 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
+
+	"net"
 
 	"github.com/pressly/chi"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/tobiaskohlbau/mqtesting/api"
-	"github.com/tobiaskohlbau/mqtesting/mq"
+	"github.com/tobiaskohlbau/mqtesting/jwt"
+	"github.com/tobiaskohlbau/mqtesting/mqtt"
+	"github.com/tobiaskohlbau/mqtesting/oauth"
 	_ "github.com/tobiaskohlbau/mqtesting/statik"
+	"github.com/tobiaskohlbau/mqtesting/store"
+	"github.com/tobiaskohlbau/mqtesting/store/memory"
 	"github.com/tobiaskohlbau/mqtesting/store/postgres"
 )
 
-var (
-	dbAddr     string
-	dbUser     string
-	dbPassword string
-	dbName     string
+const (
+	defaultJWTSecret = "secret"
 )
 
 // subCmd represents the sub command
@@ -39,28 +45,101 @@ var subCmd = &cobra.Command{
 	Use:   "sub",
 	Short: "Subscribes to specified address with all topics and serves on http://localhost the latest received messages",
 	Run: func(cmd *cobra.Command, args []string) {
-		str, err := postgres.Connect(dbAddr, dbUser, dbPassword, dbName)
+		host, port, err := net.SplitHostPort(viper.GetString("address"))
 		if err != nil {
 			log.Fatal(err)
 		}
-		mq := mq.New(mqttAddress, str)
-		a := api.New(str, api.WithMq(mq))
+
+		baseURL := viper.GetString("base_url")
 
 		r := chi.NewRouter()
 
-		r.Mount("/api", a)
+		var storeService store.Service
+		dbConfig := viper.GetStringMapString("db")
+		storeService, err = postgres.Connect(dbConfig["address"], dbConfig["user"], dbConfig["password"], dbConfig["name"])
+		if err != nil {
+			log.Println("sub: database config failed using in memory database")
+			storeService = memory.New()
+		}
 
-		statikFS, _ := fs.New()
-		r.FileServer("/", statikFS)
+		jwtSecret := viper.GetString("jwt")
+		if jwtSecret == defaultJWTSecret {
+			log.Println("sub: jwt secret not found using default value")
+		}
+		jwtService := jwt.New(jwt.WithSecret([]byte(jwtSecret)))
 
-		http.ListenAndServe(":http", r)
+		oauthOptions := []oauth.Option{}
+		for p, v := range viper.GetStringMapString("oauth") {
+			s := strings.Split(v, ":")
+			oauthOptions = append(oauthOptions, oauth.WithProvider(p, s[0], s[1]))
+		}
+		if url := viper.GetString("frontend_url"); url != "static" {
+			oauthOptions = append(oauthOptions, oauth.WithFrontend(url))
+		}
+		oauthService := oauth.New(storeService.Users(), jwtService, fmt.Sprintf("%s/oauth", baseURL), oauthOptions...)
+		r.Mount("/oauth", oauthService)
+
+		brokerAddress := viper.GetString("broker")
+		if brokerAddress == "localhost:1883" {
+			log.Println("sub: using default broker settings")
+		}
+		mqttService, err := mqtt.New(brokerAddress, "mqtesting-sub")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = mqttService.Subscribe("#", func(c mqtt.Client, m mqtt.Message) {
+			onMessage(storeService.Messages(), c, m)
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		apiOptions := []api.Option{
+			api.WithStore(storeService),
+			api.WithOAuth(oauthService),
+			api.WithJWT(jwtService),
+		}
+		apiService := api.New(apiOptions...)
+		r.Mount("/api", apiService)
+
+		if viper.GetString("frontend_url") == "static" {
+			statikFS, _ := fs.New()
+			r.FileServer("/", statikFS)
+		}
+
+		if p := viper.GetInt("http_redirect"); p != 0 {
+			go http.ListenAndServe(fmt.Sprintf("%s:%d", host, p), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusMovedPermanently)
+			}))
+		}
+		http.ListenAndServeTLS(fmt.Sprintf("%s:%s", host, port), viper.GetString("cert"), viper.GetString("key"), r)
 	},
+}
+
+func onMessage(s store.MessageService, c mqtt.Client, msg mqtt.Message) {
+	_, err := s.New(msg.Topic(), string(msg.Payload()[:]), msg.MessageID())
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func init() {
 	RootCmd.AddCommand(subCmd)
-	subCmd.Flags().StringVar(&dbAddr, "dbAddress", "localhost:5432", "db host:port")
-	subCmd.Flags().StringVar(&dbUser, "dbUser", "postgres", "db user")
-	subCmd.Flags().StringVar(&dbPassword, "dbPassword", "secret", "db password")
-	subCmd.Flags().StringVar(&dbName, "dbName", "postgres", "db name")
+
+	subCmd.Flags().String("address", ":https", "address to listen on")
+	subCmd.Flags().String("base_url", "https://localhost", "specifies base url")
+	subCmd.Flags().Int("http_redirect", 80, "redirects http on specified port to https. 0 disables option")
+	subCmd.Flags().String("frontend_url", "static", "specifies the frontend host:port by default static compiled in frontend")
+	subCmd.Flags().String("cert", "certs/server.pem", "specifies server cert file")
+	subCmd.Flags().String("key", "certs/server.key", "specifies server key file")
+	subCmd.Flags().String("jwt", defaultJWTSecret, "specifies jwt secret")
+	viper.BindPFlag("address", subCmd.Flags().Lookup("address"))
+	viper.BindPFlag("base_url", subCmd.Flags().Lookup("base_url"))
+	viper.BindPFlag("http_redirect", subCmd.Flags().Lookup("http_redirect"))
+	viper.BindPFlag("host", subCmd.Flags().Lookup("host"))
+	viper.BindPFlag("frontend_url", subCmd.Flags().Lookup("frontend_url"))
+	viper.BindPFlag("cert", subCmd.Flags().Lookup("cert"))
+	viper.BindPFlag("key", subCmd.Flags().Lookup("key"))
+	viper.BindPFlag("jwt", subCmd.Flags().Lookup("jwt"))
 }

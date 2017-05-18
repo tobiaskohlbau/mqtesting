@@ -1,0 +1,13 @@
+frontend_url: static
+db:
+  address: db:5432
+  user: postgres
+  password: secret
+  name: postgres
+jwt: production-secret
+broker: mqtt:1883
+oauth:
+  google: ""
+  microsoft: ""
+cert: /certs/server.pem
+key: /certs/server.key

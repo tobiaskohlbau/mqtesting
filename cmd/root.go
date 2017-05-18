@@ -16,14 +16,15 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile     string
-	mqttAddress string
+	cfgFile string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -42,5 +43,23 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVar(&mqttAddress, "mqttAddress", "localhost:1883", "host:port")
+	cobra.OnInitialize(initConfig)
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/mqtesting.yaml)")
+	RootCmd.PersistentFlags().String("broker", "localhost:1883", "host:port")
+	viper.BindPFlag("broker", RootCmd.PersistentFlags().Lookup("broker"))
+}
+
+func initConfig() {
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	}
+
+	viper.SetConfigName("mqtesting")
+	viper.AddConfigPath("$HOME")
+	viper.AddConfigPath(".")
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err == nil {
+		log.Println("Using config file: ", viper.ConfigFileUsed())
+	}
 }

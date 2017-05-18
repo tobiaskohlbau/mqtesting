@@ -1,0 +1,9 @@
+<div *ngIf="!authService.isAuthenticated">
+    <p *ngFor="let p of provider">
+        <button md-button (click)="login(p)">Login with {{p}}</button>
+    </p>
+</div>
+<div *ngIf="authService.isAuthenticated">
+    <span>Hello {{authService.user.name}}</span>
+    <button md-button (click)="logout()">Logout</button>
+</div>

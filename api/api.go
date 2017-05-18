@@ -17,23 +17,30 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/goware/cors"
 	"github.com/pressly/chi"
-	"github.com/tobiaskohlbau/mqtesting/mq"
+	"github.com/tobiaskohlbau/mqtesting/jwt"
+	"github.com/tobiaskohlbau/mqtesting/oauth"
 	"github.com/tobiaskohlbau/mqtesting/store"
 )
 
-type api struct {
-	rtr chi.Router
-	str store.Store
-	mq  *mq.Mq
+type Service interface {
+	http.Handler
 }
 
-func New(store store.Store, opts ...ApiOption) http.Handler {
-	a := &api{
+type service struct {
+	rtr   chi.Router
+	store store.Service
+	jwt   jwt.Service
+	oauth oauth.Service
+}
+
+func New(opts ...Option) Service {
+	s := &service{
 		rtr: chi.NewRouter(),
-		str: store,
+		jwt: jwt.New(),
 	}
 
 	cors := cors.New(cors.Options{
@@ -43,42 +50,101 @@ func New(store store.Store, opts ...ApiOption) http.Handler {
 		AllowCredentials: true,
 		MaxAge:           300,
 	})
-	a.rtr.Use(cors.Handler)
+	s.rtr.Use(cors.Handler)
 
 	for _, opt := range opts {
-		opt(a)
+		opt(s)
 	}
 
-	a.rtr.Get("/messages", a.handleGetMessages)
-	a.rtr.Get("/messages/:id", a.handleGetMessage)
-	a.rtr.Delete("/messages/:id", a.handleDeleteMessage)
+	s.rtr.Use(s.handleNoStore)
+	s.rtr.Get("/messages", s.handleGetMessages)
+	s.rtr.Get("/messages/:id", s.handleGetMessage)
+	s.rtr.Delete("/messages/:id", s.handleDeleteMessage)
 
-	return a
+	s.rtr.Get("/user", s.handleUser)
+
+	s.rtr.Get("/provider", s.handleProvider)
+
+	return s
 }
 
-type ApiOption func(*api)
+type Option func(*service)
 
-func WithMq(mq *mq.Mq) ApiOption {
-	return func(a *api) {
-		a.mq = mq
+func WithOAuth(oauth oauth.Service) Option {
+	return func(s *service) {
+		s.oauth = oauth
 	}
 }
 
-func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.rtr.ServeHTTP(w, r)
+func WithJWT(jwt jwt.Service) Option {
+	return func(s *service) {
+		s.jwt = jwt
+	}
 }
 
-func (a *api) URLParam(r *http.Request, key string) string {
+func WithStore(store store.Service) Option {
+	return func(s *service) {
+		s.store = store
+	}
+}
+
+func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.rtr.ServeHTTP(w, r)
+}
+
+func (s *service) urlParam(r *http.Request, key string) string {
 	return chi.URLParam(r, key)
 }
 
-func (a *api) render(w http.ResponseWriter, s int, d interface{}) {
+func (s *service) user(r *http.Request) *store.User {
+	ah := r.Header.Get("Authorization")
+	if len(ah) < 7 || strings.ToUpper(ah[:6]) != "BEARER" {
+		return nil
+	}
+	t := ah[7:]
+
+	uid, _, err := s.jwt.Verify(t)
+	if err != nil {
+		return nil
+	}
+
+	usr, err := s.store.Users().Get(uid)
+	if err != nil {
+		return nil
+	}
+
+	return usr
+}
+
+func (s *service) render(w http.ResponseWriter, st int, d interface{}) {
 	b, err := json.Marshal(d)
 	if err != nil {
 		http.Error(w, "failed to marshal data", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(s)
+	w.WriteHeader(st)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
+}
+
+func (s *service) handleProvider(w http.ResponseWriter, r *http.Request) {
+	pvds := []string{}
+	if s.oauth != nil {
+		pvds = s.oauth.Provider()
+	}
+	b, err := json.Marshal(pvds)
+	if err != nil {
+		http.Error(w, "failed to marshal provider", http.StatusInternalServerError)
+	}
+	w.Write(b)
+}
+
+func (s *service) handleNoStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.store == nil {
+			http.Error(w, "no storage specified", http.StatusInternalServerError)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

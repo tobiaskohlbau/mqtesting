@@ -24,12 +24,17 @@ import (
 )
 
 type Store struct {
-	db           *sql.DB
-	messageStore *messageStore
+	db             *sql.DB
+	messageService *messageService
+	userService    *userService
 }
 
-func (s *Store) Messages() store.MessageStore {
-	return s.messageStore
+func (s *Store) Messages() store.MessageService {
+	return s.messageService
+}
+
+func (s *Store) Users() store.UserService {
+	return s.userService
 }
 
 func Connect(address, username, password, database string) (*Store, error) {
@@ -48,8 +53,9 @@ func Connect(address, username, password, database string) (*Store, error) {
 	}
 
 	s := &Store{
-		db:           db,
-		messageStore: &messageStore{db: db},
+		db:             db,
+		messageService: &messageService{db: db},
+		userService:    &userService{db: db},
 	}
 
 	err = s.Migrate()

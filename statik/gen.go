@@ -35,6 +35,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	cmd = exec.Command("ng", "build")
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stderr
+	cmd.Dir = filepath.Join(wd, "frontend")
+	if err := cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
 	p := fmt.Sprintf("-src=%s", filepath.Join(wd, "frontend", "dist"))
 	cmd = exec.Command("statik", p)
 	cmd.Stdout = os.Stdout

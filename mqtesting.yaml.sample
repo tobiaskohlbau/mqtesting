@@ -1,0 +1,11 @@
+frontend_url: http://localhost:4200
+db:
+  address: localhost:5432
+  user: postgres
+  password: secret
+  name: postgres
+jwt: mqtesting-secret
+broker: localhost:1883
+oauth:
+  google: ""
+  microsoft: ""

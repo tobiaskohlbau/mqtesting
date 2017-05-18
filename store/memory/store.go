@@ -12,32 +12,30 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package store
+package memory
 
-import (
-	"errors"
-)
+import "github.com/tobiaskohlbau/mqtesting/store"
 
-var (
-	ErrNotFound = errors.New("store: item(s) not found")
-	ErrConflict = errors.New("store: item conflict")
-)
-
-type Service interface {
-	Messages() MessageService
-	Users() UserService
+type Store struct {
+	messageService *messageService
+	userService    *userService
 }
 
-type MessageService interface {
-	New(topic, payload string, messageID uint16) (int64, error)
-	ListByTopic(topic string) ([]*Message, error)
-	Get(id int64) (*Message, error)
-	Delete(id int64) error
+func (s *Store) Messages() store.MessageService {
+	return s.messageService
 }
 
-type UserService interface {
-	New(provider, id string) (int64, error)
-	Get(id int64) (*User, error)
-	GetByAuth(provider, id string) (*User, error)
-	SetName(id int64, name string) error
+func (s *Store) Users() store.UserService {
+	return s.userService
+}
+
+func New() *Store {
+	return &Store{
+		messageService: &messageService{
+			msgs: make(map[int64]*store.Message),
+		},
+		userService: &userService{
+			users: make(map[int64]*store.User),
+		},
+	}
 }

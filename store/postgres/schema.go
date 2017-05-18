@@ -26,9 +26,19 @@ var migrate = []string{
 			payload       text         not null,
 			created_at    timestamptz  not null
 		);
+
+		create table if not exists users (
+			id			  bigserial    not null primary key,
+			name		  text		   default null,
+			auth_provider text		   not null,
+			auth_id       text         not null,
+			created_at    timestamptz  not null
+		);
+		create unique index on users(auth_provider, auth_id);
 	`,
 }
 
 var drop = []string{
 	`drop table if exists messages cascade`,
+	`drop table if exists users cascade`,
 }

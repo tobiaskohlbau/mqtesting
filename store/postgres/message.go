@@ -21,11 +21,11 @@ import (
 	"github.com/tobiaskohlbau/mqtesting/store"
 )
 
-type messageStore struct {
+type messageService struct {
 	db *sql.DB
 }
 
-func (s *messageStore) New(topic, payload string, messageID uint16) (int64, error) {
+func (s *messageService) New(topic, payload string, messageID uint16) (int64, error) {
 	var id int64
 
 	err := s.db.QueryRow(
@@ -41,7 +41,7 @@ func (s *messageStore) New(topic, payload string, messageID uint16) (int64, erro
 
 const selectFromMessages = `select * from messages`
 
-func (s *messageStore) scanMessage(scanner scanner) (*store.Message, error) {
+func (s *messageService) scanMessage(scanner scanner) (*store.Message, error) {
 	m := new(store.Message)
 
 	err := scanner.Scan(&m.ID, &m.Duplicate, &m.Qos, &m.Retained, &m.Topic, &m.MessageID, &m.Payload, &m.CreatedAt)
@@ -55,7 +55,7 @@ func (s *messageStore) scanMessage(scanner scanner) (*store.Message, error) {
 	return m, nil
 }
 
-func (s *messageStore) ListByTopic(topic string) ([]*store.Message, error) {
+func (s *messageService) ListByTopic(topic string) ([]*store.Message, error) {
 	var (
 		msgs []*store.Message
 		rows *sql.Rows
@@ -86,12 +86,12 @@ func (s *messageStore) ListByTopic(topic string) ([]*store.Message, error) {
 	return msgs, nil
 }
 
-func (s *messageStore) Get(id int64) (*store.Message, error) {
+func (s *messageService) Get(id int64) (*store.Message, error) {
 	row := s.db.QueryRow(selectFromMessages+` where id=$1`, id)
 	return s.scanMessage(row)
 }
 
-func (s *messageStore) Delete(id int64) error {
+func (s *messageService) Delete(id int64) error {
 	_, err := s.db.Exec(`delete from messages where id=$1`, id)
 	return err
 }

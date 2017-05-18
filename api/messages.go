@@ -19,41 +19,48 @@ import (
 	"strconv"
 )
 
-func (a *api) handleGetMessages(w http.ResponseWriter, r *http.Request) {
+func (s *service) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 	tp := r.URL.Query().Get("topic")
-	msgs, err := a.str.Messages().ListByTopic(tp)
+	msgs, err := s.store.Messages().ListByTopic(tp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if len(msgs) == 0 {
-		a.render(w, http.StatusOK, []string{})
+		s.render(w, http.StatusOK, []string{})
 		return
 	}
-	a.render(w, http.StatusOK, msgs)
+	s.render(w, http.StatusOK, msgs)
 }
 
-func (a *api) handleGetMessage(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(a.URLParam(r, "id"), 10, 64)
+func (s *service) handleGetMessage(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(s.urlParam(r, "id"), 10, 64)
 	if err != nil {
 		http.Error(w, "failed to parse message id", http.StatusBadRequest)
 		return
 	}
-	msg, err := a.str.Messages().Get(id)
+	msg, err := s.store.Messages().Get(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	a.render(w, http.StatusOK, msg)
+	s.render(w, http.StatusOK, msg)
 }
 
-func (a *api) handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(a.URLParam(r, "id"), 10, 64)
+func (s *service) handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
+	usr := s.user(r)
+	if usr == nil {
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	id, err := strconv.ParseInt(s.urlParam(r, "id"), 10, 64)
 	if err != nil {
 		http.Error(w, "failed to parse message id", http.StatusBadRequest)
 		return
 	}
-	if err := a.str.Messages().Delete(id); err != nil {
+	if err := s.store.Messages().Delete(id); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

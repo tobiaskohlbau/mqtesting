@@ -3,3 +3,7 @@
 **/.vscode
 **/e2e/*.js
 **/e2e/*.map
+certs/*.key
+certs/*.pem
+mqtesting.docker.yaml
+mqtesting.yaml
