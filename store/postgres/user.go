@@ -18,7 +18,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/tobiaskohlbau/mqtesting/store"
+	"kohlbau.de/x/mqtesting/store"
 )
 
 type userService struct {

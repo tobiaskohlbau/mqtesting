@@ -17,9 +17,9 @@ package memory
 import (
 	"sort"
 
-	"time"
+	"kohlbau.de/x/mqtesting/store"
 
-	"github.com/tobiaskohlbau/mqtesting/store"
+	"time"
 )
 
 type messageService struct {

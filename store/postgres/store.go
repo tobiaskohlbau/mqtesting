@@ -19,8 +19,7 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
-
-	"github.com/tobiaskohlbau/mqtesting/store"
+	"kohlbau.de/x/mqtesting/store"
 )
 
 type Store struct {

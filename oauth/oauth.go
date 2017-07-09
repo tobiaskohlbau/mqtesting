@@ -22,12 +22,13 @@ import (
 	"sort"
 	"time"
 
+	"kohlbau.de/x/mqtesting/jwt"
+	"kohlbau.de/x/mqtesting/store"
+
 	"golang.org/x/oauth2"
 
 	"github.com/pressly/chi"
 	uuid "github.com/satori/go.uuid"
-	"github.com/tobiaskohlbau/mqtesting/jwt"
-	"github.com/tobiaskohlbau/mqtesting/store"
 )
 
 const (

@@ -20,20 +20,21 @@ import (
 	"net/http"
 	"strings"
 
+	"kohlbau.de/x/mqtesting/api"
+	"kohlbau.de/x/mqtesting/jwt"
+	"kohlbau.de/x/mqtesting/oauth"
+	"kohlbau.de/x/mqtesting/store"
+	"kohlbau.de/x/mqtesting/store/memory"
+	"kohlbau.de/x/mqtesting/store/postgres"
+
 	"net"
 
 	"github.com/pressly/chi"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tobiaskohlbau/mqtesting/api"
-	"github.com/tobiaskohlbau/mqtesting/jwt"
-	"github.com/tobiaskohlbau/mqtesting/mqtt"
-	"github.com/tobiaskohlbau/mqtesting/oauth"
-	_ "github.com/tobiaskohlbau/mqtesting/statik"
-	"github.com/tobiaskohlbau/mqtesting/store"
-	"github.com/tobiaskohlbau/mqtesting/store/memory"
-	"github.com/tobiaskohlbau/mqtesting/store/postgres"
+	"kohlbau.de/x/mqtesting/mqtt"
+	_ "kohlbau.de/x/mqtesting/statik"
 )
 
 const (

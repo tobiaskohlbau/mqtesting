@@ -14,7 +14,7 @@
 
 package memory
 
-import "github.com/tobiaskohlbau/mqtesting/store"
+import "kohlbau.de/x/mqtesting/store"
 
 type Store struct {
 	messageService *messageService

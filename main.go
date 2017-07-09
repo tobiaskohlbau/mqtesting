@@ -14,9 +14,9 @@
 
 //go:generate go run statik/gen.go
 
-package main
+package main /* import "kohlbau.de/x/mqtesting" */
 
-import "github.com/tobiaskohlbau/mqtesting/cmd"
+import "kohlbau.de/x/mqtesting/cmd"
 
 func main() {
 	cmd.Execute()

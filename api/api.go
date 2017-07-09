@@ -19,11 +19,12 @@ import (
 	"net/http"
 	"strings"
 
+	"kohlbau.de/x/mqtesting/jwt"
+	"kohlbau.de/x/mqtesting/oauth"
+	"kohlbau.de/x/mqtesting/store"
+
 	"github.com/goware/cors"
 	"github.com/pressly/chi"
-	"github.com/tobiaskohlbau/mqtesting/jwt"
-	"github.com/tobiaskohlbau/mqtesting/oauth"
-	"github.com/tobiaskohlbau/mqtesting/store"
 )
 
 type Service interface {
